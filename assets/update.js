@@ -16,10 +16,40 @@ CTFd.plugin.run((_CTFd) => {
         
         // Initialize the map
         const map = L.map('map-update').setView([initialLat, initialLng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        
+        // Define base layers
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        });
+
+        const esriWorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        // Add default layer
+        osmLayer.addTo(map);
+
+        // Create layer control
+        const baseLayers = {
+            "Street Map": osmLayer,
+            "Satellite": esriWorldImagery
+        };
+
+        // Add layer control outside of any form elements
+        const layerControl = L.control.layers(baseLayers);
+        layerControl.addTo(map);
+        
+        // Ensure the layer control doesn't interfere with form submission
+        const layerControlContainer = document.querySelector('.leaflet-control-layers');
+        if (layerControlContainer) {
+            // Prevent any form elements inside the control from being submitted
+            const inputs = layerControlContainer.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.setAttribute('form', 'no-form');
+            });
+        }
 
         // Add geocoder control
         const geocoder = L.Control.geocoder({

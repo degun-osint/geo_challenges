@@ -40,10 +40,27 @@ CTFd.plugin.run((_CTFd) => {
           zoom: 2,
         });
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        // Define base layers
+        const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
           attribution: "© OpenStreetMap contributors",
-        }).addTo(mapInstance);
+        });
+
+        const esriWorldImagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 19,
+          attribution: "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
+        });
+
+        // Add default layer
+        osmLayer.addTo(mapInstance);
+
+        // Create layer control
+        const baseLayers = {
+          "Street Map": osmLayer,
+          "Satellite": esriWorldImagery,
+        };
+
+        L.control.layers(baseLayers).addTo(mapInstance);
 
         const geocoder = L.Control.geocoder({
           defaultMarkGeocode: false,

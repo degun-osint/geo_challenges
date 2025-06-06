@@ -40,10 +40,20 @@ class GeoChallenge(Challenges):
     tolerance_radius = db.Column(Numeric(10, 2), default=10)
 
     def __init__(self, *args, **kwargs):
+        self.latitude = kwargs.pop('latitude', 0)
+        self.longitude = kwargs.pop('longitude', 0)
+        self.tolerance_radius = kwargs.pop('tolerance_radius', 10)
+        
+        # Remove any Leaflet-related fields that might have been added
+        keys_to_remove = []
+        for key in kwargs.keys():
+            if 'leaflet' in key.lower() or 'layer' in key.lower():
+                keys_to_remove.append(key)
+        
+        for key in keys_to_remove:
+            kwargs.pop(key, None)
+            
         super(GeoChallenge, self).__init__(**kwargs)
-        self.latitude = kwargs.get('latitude', 0)
-        self.longitude = kwargs.get('longitude', 0)
-        self.tolerance_radius = kwargs.get('tolerance_radius', 10)
 
 
 class GeoChallengeType(BaseChallenge):
