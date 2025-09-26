@@ -1,0 +1,95 @@
+{% extends "admin/challenges/create.html" %}
+
+{% block header %}
+<div class="alert alert-secondary" role="alert">
+    Geographic challenges require users to find a specific location on a map. Points are awarded based on how close they get to the target location.
+</div>
+{% endblock %}
+
+{% block value %}
+
+<style>
+    #map-create {
+        height: 400px;
+        width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        z-index: 1;
+    }
+</style>
+
+<div class="form-group">
+    <label for="value">Value<br>
+        <small class="form-text text-muted">
+            Points awarded for finding the correct location
+        </small>
+    </label>
+    <input type="number" class="form-control" name="value" placeholder="Enter value" required>
+</div>
+
+<div class="form-group">
+    <label>Location Selection<br>
+        <small class="form-text text-muted">Click on the map to set the target location</small>
+    </label>
+    <div id="map-create"></div>
+</div>
+
+<div class="form-group">
+    <label for="latitude">Latitude</label>
+    <input type="text" class="form-control" name="latitude" id="latitude" required>
+</div>
+
+<div class="form-group">
+    <label for="longitude">Longitude</label>
+    <input type="text" class="form-control" name="longitude" id="longitude" required>
+</div>
+
+<div class="form-group">
+    <label for="tolerance_radius">Tolerance Radius (meters)<br>
+        <small class="form-text text-muted">
+            Users must find a location within this radius to solve the challenge
+        </small>
+    </label>
+    <input type="number" class="form-control" name="tolerance_radius" min="1" value="10" required>
+</div>
+
+<script>
+// Initialize the map after the page loads
+window.addEventListener('load', function() {
+    const map = L.map('map-create').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Fix any display issues
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+    
+    let marker = null;
+    
+    // Handle map clicks
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        // Update form fields
+        document.getElementById('latitude').value = lat.toFixed(10);
+        document.getElementById('longitude').value = lng.toFixed(10);
+        
+        // Update or create marker
+        if (marker) {
+            marker.setLatLng(e.latlng);
+        } else {
+            marker = L.marker(e.latlng).addTo(map);
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block type %}
+<input type="hidden" value="geo" name="type" id="chaltype">
+{% endblock %}

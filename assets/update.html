@@ -1,0 +1,57 @@
+{% extends "admin/challenges/update.html" %}
+
+{% block header %}
+<div class="alert alert-secondary" role="alert">
+    Geographic challenges require users to find a specific location on a map. Points are awarded based on how close they get to the target location.
+</div>
+{% endblock %}
+
+{% block value %}
+
+<style>
+    #map-update {
+        height: 400px;
+        width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        z-index: 1;
+    }
+</style>
+
+<div class="form-group">
+    <label for="value">Initial Value<br>
+        <small class="form-text text-muted">
+            Number of points awarded for finding the exact location
+        </small>
+    </label>
+    <input type="number" class="form-control" name="value" value="{{ challenge.value }}" required>
+</div>
+
+<div class="form-group">
+    <label>Location Selection<br>
+        <small class="form-text text-muted">Click on the map to change the target location</small>
+    </label>
+    <div id="map-update"></div>
+</div>
+
+<div class="form-group">
+    <label for="latitude">Latitude</label>
+    <input type="text" class="form-control" name="latitude" id="latitude" value="{{ challenge.latitude }}" required>
+</div>
+
+<div class="form-group">
+    <label for="longitude">Longitude</label>
+    <input type="text" class="form-control" name="longitude" id="longitude" value="{{ challenge.longitude }}" required>
+</div>
+
+<div class="form-group">
+    <label for="tolerance_radius">Tolerance Radius (meters)<br>
+        <small class="form-text text-muted">
+            Users within this radius will receive full points
+        </small>
+    </label>
+    <input type="number" class="form-control" name="tolerance_radius" min="1" value="{{ challenge.tolerance_radius }}" required>
+</div>
+
+{% endblock %}

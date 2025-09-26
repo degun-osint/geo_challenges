@@ -1,0 +1,209 @@
+<style>
+    .leaflet-control-geocoder-form input {
+        color: #000 !important;
+    }
+</style>
+<div :class="getStyles()" role="document" x-data="Challenge" x-init="id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}">
+    <div class="modal-content">
+        <div class="modal-body">
+            <button type="button" class="btn-close float-end" data-bs-dismiss="modal" aria-label="Close"></button>
+
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-target="#challenge" data-bs-toggle="tab">
+                        Challenge
+                    </button>
+                </li>
+                
+                {% if Configs.view_self_submissions %}
+                <li class="nav-item">
+                    <button class="nav-link challenge-submissions" data-bs-target="#submissions" @click="showSubmissions()">
+                        Submissions
+                    </button>
+                </li>
+                {% endif %}
+                
+                <li class="nav-item">
+                    <button class="nav-link challenge-solves" data-bs-target="#solves" data-bs-toggle="tab">
+                        {% if solves != None %}
+                            {{ solves }} {% if solves > 1 %}Solves{% else %}Solve{% endif %}
+                        {% endif %}
+                    </button>
+                </li>
+            </ul>
+            <div role="tabpanel">
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane fade show active" id="challenge">
+                        <h2 class="challenge-name text-center pt-3">{{ challenge.name }}</h2>
+                        <h3 class="challenge-value text-center">{{ challenge.value }}</h3>
+
+                        {% if tags %}
+                            <div class="challenge-tags text-center">
+                                {% for tag in tags %}
+                                    <span class='badge badge-info challenge-tag'>{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <small class="challenge-attribution text-center text-muted">
+                            {% block attribution %}{{ challenge.byline }}{% endblock %}
+                        </small>
+
+                        <span class="challenge-desc">{{ challenge.description | markdown | safe }}</span>
+
+                        <div id="map-container" class="my-4">
+                            <div id="map-solve" style="height: 400px; width: 100%; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;"></div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="submit-latitude" 
+                                        placeholder="Latitude">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="submit-longitude" 
+                                        placeholder="Longitude">
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <div class="alert alert-info">
+                                        <small>
+                                            <i class="fas fa-info-circle"></i> 
+                                            <span class="map-instructions">Click on the map to place your marker. A blue circle indicates the tolerance zone.</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if hints %}
+                            <div class="challenge-hints hint-row row">
+                                <div class="col-12 mb-3">
+                                {% for hint in hints | sort(attribute="cost") %}
+                                    <div x-data="Hint" x-init="id = {{ hint.id }}">
+                                        {% if hint.content %}
+                                        <details>
+                                            <summary>View Hint</summary>
+                                            <div>{{ hint.html | safe }}</div>
+                                        </details>
+                                        {% else %}
+                                        <details @toggle="showHint(event)">
+                                            {% if hint.title %}
+                                            <summary>{{ hint.title }} (Cost: {{ hint.cost }} point{{ hint.cost|pluralize }})</summary>
+                                            {% else %}
+                                            <summary>Unlock Hint for {{ hint.cost }} point{{ hint.cost|pluralize }}</summary>
+                                            {% endif %}
+                                            <div x-html="html"></div>
+                                        </details>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if files %}
+                            <div class="row challenge-files text-center pb-3">
+                                {% for file in files %}
+                                    <div class="col-md-4 col-sm-4 col-xs-12 file-button-wrapper d-block">
+                                        {% set segments = file.split('/') %}
+                                        {% set token = file.split('?') | last %}
+                                        {% if token %}
+                                            {% set filename = segments | last | replace("?" + token, "") %}
+                                        {% else %}
+                                            {% set filename = segments | last %}
+                                        {% endif %}
+                                        <a
+                                            class="btn btn-info btn-file mb-1 d-inline-block px-2 w-100 text-truncate"
+                                            href="{{ file }}"
+                                            title="{{ filename }}"
+                                        >
+                                            <i class="fas fa-download"></i>
+                                            <small>
+                                                {{ filename }}
+                                            </small>
+                                        </a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        
+
+                        {% if max_attempts > 0 %}
+                            <p class="text-center">
+                                {{ attempts }}/{{ max_attempts }} attempt{% if max_attempts > 1 %}s{% endif %}
+                            </p>
+                        {% endif %}
+
+                        <div class="row submit-row">
+                            <div class="col-md-12">
+                                <input id="challenge-id" type="hidden" value="{{ challenge.id }}">
+                                <button id="geo-submit" class="btn btn-success float-end">
+                                    Submit Location
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row notification-row">
+                            <div class="col-md-12">
+                                <div id="result-notification" class="alert alert-dismissable text-center w-100"
+                                    role="alert" style="display: none;">
+                                    <strong id="result-message"></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div role="tabpanel" class="tab-pane fade" id="submissions">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <table class="table table-striped align-middle text-center">
+                                    <thead>
+                                    <tr>
+                                        <th>Submission</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="challenge-submission-names">
+                                    <template x-for="submission in submissions">
+                                        <tr>
+                                            <td x-data="{ truncate: true }">
+                                                <code x-text="truncate ? '*'.repeat(submission.provided.length) : submission.provided"></code>
+                                                <button class="btn btn-link p-0 pl-1" @click="truncate = !truncate">
+                                                    <i :class="truncate ? 'fas fa-eye' : 'fas fa-eye-slash'"></i>
+                                                </button>
+                                            </td>
+                                            <td x-text="submission.type"></td>
+                                            <td x-text="submission.date"></td>
+                                        </tr>
+                                    </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div role="tabpanel" class="tab-pane fade" id="solves">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <table class="table table-striped text-center">
+                                    <thead>
+                                        <tr>
+                                            <td><b>Name</b></td>
+                                            <td><b>Date</b></td>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="challenge-solves-names">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
