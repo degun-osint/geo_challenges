@@ -16,10 +16,10 @@ depends_on = None
 
 
 def upgrade(op=None):
-    # Create geo_challenge table if it doesn't exist
+    # Create geo_dynamic_challenge table if it doesn't exist
     try:
         op.create_table(
-            'geo_challenge',
+            'geo_dynamic_challenge',
             sa.Column('id', sa.Integer, sa.ForeignKey('challenges.id', ondelete='CASCADE'), primary_key=True),
             sa.Column('latitude', sa.Float, default=0),
             sa.Column('longitude', sa.Float, default=0),
@@ -37,17 +37,17 @@ def downgrade(op=None):
     try:
         if url.startswith("mysql"):
             op.drop_constraint(
-                'geo_challenge_ibfk_1', 'geo_challenge', type_='foreignkey'
+                'geo_dynamic_challenge_ibfk_1', 'geo_dynamic_challenge', type_='foreignkey'
             )
         elif url.startswith("postgres"):
             op.drop_constraint(
-                'geo_challenge_id_fkey', 'geo_challenge', type_='foreignkey'
+                'geo_dynamic_challenge_id_fkey', 'geo_dynamic_challenge', type_='foreignkey'
             )
     except Exception as e:
         print(f"Constraint drop error: {str(e)}")
 
     # Then drop the table
     try:
-        op.drop_table('geo_challenge')
+        op.drop_table('geo_dynamic_challenge')
     except Exception as e:
         print(f"Table drop error: {str(e)}")
