@@ -64,18 +64,18 @@ class GeoChallengeType(BaseChallenge):
     id = "geo"
     name = "geo"
     templates = {
-        "create": "/plugins/geo_challenges/assets/create.html",
-        "update": "/plugins/geo_challenges/assets/update.html",
-        "view": "/plugins/geo_challenges/assets/view.html",
+        "create": "/plugins/geo_dynamic_challenge/assets/create.html",
+        "update": "/plugins/geo_dynamic_challenge/assets/update.html",
+        "view": "/plugins/geo_dynamic_challenge/assets/view.html",
     }
     scripts = {
-        "create": "/plugins/geo_challenges/assets/create.js",
-        "update": "/plugins/geo_challenges/assets/update.js",
-        "view": "/plugins/geo_challenges/assets/view.js",
+        "create": "/plugins/geo_dynamic_challenge/assets/create.js",
+        "update": "/plugins/geo_dynamic_challenge/assets/update.js",
+        "view": "/plugins/geo_dynamic_challenge/assets/view.js",
     }
-    route = "/plugins/geo_challenges/assets/"
+    route = "/plugins/geo_dynamic_challenge/assets/"
     blueprint = Blueprint(
-        "geo_challenges",
+        "geo_dynamic_challenge",
         __name__,
         template_folder="templates",
         static_folder="assets",
@@ -185,13 +185,13 @@ class GeoChallengeType(BaseChallenge):
 
 def load(app):
     
-    upgrade(plugin_name="geo_challenges")
+    upgrade(plugin_name="geo_dynamic_challenge")
 
     # Create tables for the plugin
     app.db.create_all()
     
     # Add API endpoint for formatting submissions
-    @app.route('/plugins/geo_challenges/api/format-submission', methods=['POST'])
+    @app.route('/plugins/geo_dynamic_challenge/api/format-submission', methods=['POST'])
     def format_geo_submission():
         """API endpoint to format geo submissions for display"""
         try:
@@ -212,22 +212,22 @@ def load(app):
             return jsonify({"success": False, "error": str(e)}), 500
     
     # Register Leaflet globally
-    register_plugin_stylesheet("/plugins/geo_challenges/assets/leaflet/leaflet.css")
-    register_plugin_script("/plugins/geo_challenges/assets/leaflet/leaflet.js")
-    register_admin_plugin_stylesheet("/plugins/geo_challenges/assets/leaflet/leaflet.css")
-    register_admin_plugin_script("/plugins/geo_challenges/assets/leaflet/leaflet.js")
+    register_plugin_stylesheet("/plugins/geo_dynamic_challenge/assets/leaflet/leaflet.css")
+    register_plugin_script("/plugins/geo_dynamic_challenge/assets/leaflet/leaflet.js")
+    register_admin_plugin_stylesheet("/plugins/geo_dynamic_challenge/assets/leaflet/leaflet.css")
+    register_admin_plugin_script("/plugins/geo_dynamic_challenge/assets/leaflet/leaflet.js")
     
     # register geocontrol
     
-    register_plugin_stylesheet("/plugins/geo_challenges/assets/geocoder/Control.Geocoder.css")
-    register_plugin_script("/plugins/geo_challenges/assets/geocoder/Control.Geocoder.js")
-    register_admin_plugin_stylesheet("/plugins/geo_challenges/assets/geocoder/Control.Geocoder.css")
-    register_admin_plugin_script("/plugins/geo_challenges/assets/geocoder/Control.Geocoder.js")
+    register_plugin_stylesheet("/plugins/geo_dynamic_challenge/assets/geocoder/Control.Geocoder.css")
+    register_plugin_script("/plugins/geo_dynamic_challenge/assets/geocoder/Control.Geocoder.js")
+    register_admin_plugin_stylesheet("/plugins/geo_dynamic_challenge/assets/geocoder/Control.Geocoder.css")
+    register_admin_plugin_script("/plugins/geo_dynamic_challenge/assets/geocoder/Control.Geocoder.js")
     
-    register_plugin_script("/plugins/geo_challenges/assets/view.js")
+    register_plugin_script("/plugins/geo_dynamic_challenge/assets/view.js")
 
     # Ajout d'un script très simple pour les liens de coordonnées GPS
-    @app.route('/plugins/geo_challenges/geo_link.js')
+    @app.route('/plugins/geo_dynamic_challenge/geo_link.js')
     def geo_link_script():
         return """
         document.addEventListener('DOMContentLoaded', function() {
@@ -259,13 +259,13 @@ def load(app):
         """
 
     # Enregistrer le script personnalisé
-    register_plugin_script("/plugins/geo_challenges/geo_link.js")
-    register_admin_plugin_script("/plugins/geo_challenges/geo_link.js")
-    register_plugin_script("/plugins/geo_challenges/assets/i18n.js")
+    register_plugin_script("/plugins/geo_dynamic_challenge/geo_link.js")
+    register_admin_plugin_script("/plugins/geo_dynamic_challenge/geo_link.js")
+    register_plugin_script("/plugins/geo_dynamic_challenge/assets/i18n.js")
     
     # Register the plugin assets directory
     register_plugin_assets_directory(
-        app, base_path="/plugins/geo_challenges/assets/"
+        app, base_path="/plugins/geo_dynamic_challenge/assets/"
     )
     
     # Register the challenge type's blueprint
