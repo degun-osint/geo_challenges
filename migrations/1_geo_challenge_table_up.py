@@ -21,9 +21,9 @@ def upgrade(op=None):
         op.create_table(
             'geo_challenge',
             sa.Column('id', sa.Integer, sa.ForeignKey('challenges.id', ondelete='CASCADE'), primary_key=True),
-            sa.Column('latitude', sa.Float, default=0),
-            sa.Column('longitude', sa.Float, default=0),
-            sa.Column('tolerance_radius', sa.Float, default=10)
+            sa.Column('latitude', sa.Float, server_default="0"),
+            sa.Column('longitude', sa.Float, server_default="0"),
+            sa.Column('tolerance_radius', sa.Float, server_default="10")
         )
     except Exception as e:
         print(f"Table creation error (might already exist): {str(e)}")
