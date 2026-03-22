@@ -1,95 +1,83 @@
 {% extends "admin/challenges/create.html" %}
 
 {% block header %}
-<div class="alert alert-secondary" role="alert">
-    Geographic challenges require users to find a specific location on a map. Points are awarded based on how close they get to the target location.
+<div class="alert alert-info d-flex align-items-center gap-2" role="alert">
+    <i class="fas fa-map-marked-alt fa-lg me-2"></i>
+    <div>
+        <strong>GeoLoc Challenge</strong> — Players must find and pin the correct location on a map to earn points.
+    </div>
 </div>
 {% endblock %}
 
 {% block value %}
-
 <style>
-    #map-create {
-        height: 400px;
-        width: 100%;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        margin-bottom: 15px;
-        z-index: 1;
-    }
+#geoloc-admin-map {
+    height: 440px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+}
+.coord-field { font-family: monospace; font-size: 0.9rem; }
 </style>
 
 <div class="form-group">
-    <label for="value">Value<br>
+    <label for="value">Point Value
+        <small class="form-text text-muted">Points awarded for finding the location</small>
+    </label>
+    <input type="number" class="form-control" name="value" placeholder="100" required>
+</div>
+
+<hr class="my-4">
+<h6 class="text-uppercase text-muted fw-bold mb-3">
+    <i class="fas fa-crosshairs me-2"></i>Target Location
+</h6>
+
+<div class="form-group">
+    <label>Pick the target location
         <small class="form-text text-muted">
-            Points awarded for finding the correct location
+            Use the search bar, click the map, or type coordinates directly.
+            Layers: OpenStreetMap, Satellite, Google Street, Google Hybrid.
         </small>
     </label>
-    <input type="number" class="form-control" name="value" placeholder="Enter value" required>
+    <div id="geoloc-admin-map"></div>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-6">
+        <label for="target_lat" class="form-label">Latitude</label>
+        <input type="text" class="form-control coord-field" name="target_lat" id="target_lat"
+               placeholder="48.8584" required>
+    </div>
+    <div class="col-md-6">
+        <label for="target_lon" class="form-label">Longitude</label>
+        <input type="text" class="form-control coord-field" name="target_lon" id="target_lon"
+               placeholder="2.2945" required>
+    </div>
 </div>
 
 <div class="form-group">
-    <label>Location Selection<br>
-        <small class="form-text text-muted">Click on the map to set the target location</small>
-    </label>
-    <div id="map-create"></div>
-</div>
-
-<div class="form-group">
-    <label for="latitude">Latitude</label>
-    <input type="text" class="form-control" name="latitude" id="latitude" required>
-</div>
-
-<div class="form-group">
-    <label for="longitude">Longitude</label>
-    <input type="text" class="form-control" name="longitude" id="longitude" required>
-</div>
-
-<div class="form-group">
-    <label for="tolerance_radius">Tolerance Radius (meters)<br>
+    <label for="radius_meters">Acceptance Radius (meters)
         <small class="form-text text-muted">
-            Users must find a location within this radius to solve the challenge
+            Players within this radius earn full points. The green circle on the map shows the zone.
         </small>
     </label>
-    <input type="number" class="form-control" name="tolerance_radius" min="1" value="10" required>
+    <input type="number" class="form-control" name="radius_meters" id="radius_meters"
+           min="1" value="50" required>
 </div>
 
-<script>
-// Initialize the map after the page loads
-window.addEventListener('load', function() {
-    const map = L.map('map-create').setView([0, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Fix any display issues
-    setTimeout(() => {
-        map.invalidateSize();
-    }, 100);
-    
-    let marker = null;
-    
-    // Handle map clicks
-    map.on('click', function(e) {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-        
-        // Update form fields
-        document.getElementById('latitude').value = lat.toFixed(10);
-        document.getElementById('longitude').value = lng.toFixed(10);
-        
-        // Update or create marker
-        if (marker) {
-            marker.setLatLng(e.latlng);
-        } else {
-            marker = L.marker(e.latlng).addTo(map);
-        }
-    });
-});
-</script>
+<div class="form-group">
+    <label for="tolerance_buffer_pct">Admin buffer (%)</label>
+    <input class="form-control" id="tolerance_buffer_pct" name="tolerance_buffer_pct"
+           type="number" value="0" min="0" step="0.1"
+           placeholder="e.g. 2 → adds an invisible 2% buffer on top of the radius">
+    <small class="form-text text-muted">
+        Silent extra margin invisible to players. Example: 2% on 50 m = 51 m actual tolerance.
+    </small>
+    <small id="effective-radius-display" class="form-text text-info mt-1 d-block"></small>
+</div>
 {% endblock %}
 
 {% block type %}
-<input type="hidden" value="geo" name="type" id="chaltype">
+<input type="hidden" value="geoloc" name="type" id="chaltype">
 {% endblock %}

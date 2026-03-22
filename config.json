@@ -1,0 +1,7 @@
+{
+  "name": "GeoLoc Challenge",
+  "version": "2.0.0",
+  "description": "A challenge type where players must identify and pin a target location on an interactive map. Supports proximity hints, configurable acceptance radius, admin tolerance buffer, multiple tile layers, and a full submission history panel.",
+  "author": "Original: @Degun-OSINT — Extended: @HACK-OLYTE",
+  "route": "/plugins/geo_challenges/settings"
+}

@@ -1,0 +1,659 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>GeoLoc Challenges</h1>
+    <p class="lead">Plugin settings, per-challenge configuration and submission history.</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Global settings -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>Global settings</strong></div>
+    <div class="card-body">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="global_hints"
+               {% if proximity_hints %}checked{% endif %}>
+        <label class="form-check-label" for="global_hints">
+          Show proximity hints to players
+          <small class="text-muted d-block">
+            e.g. <em>"Wrong location — Very close! (~69 m)"</em>. Can be overridden per challenge.
+          </small>
+        </label>
+      </div>
+      <span id="global-saved" class="text-success" style="display:none;">
+        <i class="fas fa-check"></i> Saved
+      </span>
+    </div>
+  </div>
+
+  <!-- Default player map layer -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <strong>Default map layer for players</strong>
+      <span id="layer-saved" class="text-success small" style="display:none;">
+        <i class="fas fa-check"></i> Saved
+      </span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        Choose which tile layer is active by default when a player opens a GeoLoc challenge.
+        Players can still switch layers using the selector on the map.
+      </p>
+      <div class="row" id="layer-cards">
+        <!-- Cards are injected by JS once the current setting is loaded -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-challenge hint settings -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="gap:.5rem;">
+      <strong>Hints per challenge</strong>
+      <div id="chall-controls" class="d-flex align-items-center" style="display:none!important;gap:.5rem;">
+        <div class="input-group input-group-sm" style="width:220px;">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="text" class="form-control" id="chall-search"
+                 placeholder="Search by name or category…" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div id="chall-loading" class="p-3 text-muted">
+        <i class="fas fa-spinner fa-spin"></i> Loading…
+      </div>
+      <table class="table table-sm mb-0" id="chall-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Challenge</th>
+            <th>Category</th>
+            <th>Points</th>
+            <th>Radius (m)</th>
+            <th>Hint</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="chall-tbody"></tbody>
+      </table>
+      <div class="d-flex align-items-center justify-content-between p-2 border-top"
+           id="chall-pagination" style="display:none;">
+        <div class="text-muted small" id="chall-pagination-info"></div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" id="chall-btn-prev" disabled>
+            <i class="fas fa-chevron-left"></i> Prev
+          </button>
+          <span class="btn btn-outline-secondary disabled" id="chall-page-indicator">1 / 1</span>
+          <button class="btn btn-outline-secondary" id="chall-btn-next">
+            Next <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <div></div>
+      </div>
+      <p class="text-muted p-3 mb-0" id="chall-empty" style="display:none;">
+        No geoloc challenges found.
+      </p>
+    </div>
+  </div>
+
+  <!-- Submissions table -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <strong>All GeoLoc submissions</strong>
+      <button class="btn btn-sm btn-outline-secondary" id="refresh-btn">
+        <i class="fas fa-sync"></i> Refresh
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div id="sub-loading" class="p-3 text-muted" style="display:none;">
+        <i class="fas fa-spinner fa-spin"></i> Loading…
+      </div>
+      <!-- Filters -->
+      <div class="p-3 border-bottom" id="sub-filters" style="display:none;">
+        <div class="row">
+          <div class="col-md-4">
+            <select class="form-control form-control-sm" id="filter-challenge">
+              <option value="">-- All challenges --</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <input type="text" class="form-control form-control-sm" id="filter-player"
+                   placeholder="Filter by player…">
+          </div>
+          <div class="col-md-3">
+            <select class="form-control form-control-sm" id="filter-result">
+              <option value="">-- All results --</option>
+              <option value="correct">✓ Correct</option>
+              <option value="incorrect">✗ Incorrect</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-sm btn-outline-secondary w-100" id="reset-filters">
+              <i class="fas fa-times"></i> Reset
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive" id="sub-table-wrap" style="display:none;">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Challenge</th>
+              <th>Player</th>
+              <th>Lat</th>
+              <th>Lon</th>
+              <th>Distance</th>
+              <th>Radius</th>
+              <th>Eff. radius</th>
+              <th>Result</th>
+              <th>Map</th>
+            </tr>
+          </thead>
+          <tbody id="sub-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="d-flex align-items-center justify-content-between p-2 border-top"
+           id="sub-pagination" style="display:none;">
+        <div class="text-muted small" id="pagination-info"></div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" id="btn-prev" disabled>
+            <i class="fas fa-chevron-left"></i> Prev
+          </button>
+          <span class="btn btn-outline-secondary disabled" id="page-indicator">1 / 1</span>
+          <button class="btn btn-outline-secondary" id="btn-next">
+            Next <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <div>
+          <select class="form-control form-control-sm d-inline-block" id="rows-per-page"
+                  style="width:auto;">
+            <option value="10" selected>10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
+        </div>
+      </div>
+      <p class="text-muted p-3 mb-0" id="sub-empty" style="display:none;">
+        No submissions yet.
+      </p>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Submission map modal -->
+<div class="modal fade" id="geolocMapModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-xl" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Map — <span id="modal-chall-name"></span>
+          (<span id="modal-user"></span>)
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <div class="modal-body p-0">
+        <div id="geoloc-admin-modal-map" style="height:500px;width:100%;"></div>
+      </div>
+      <div class="modal-footer justify-content-start text-muted small">
+        <i class="fas fa-circle text-primary mr-1"></i> Player radius &nbsp;|&nbsp;
+        <i class="fas fa-circle text-success mr-1"></i> Target zone &nbsp;|&nbsp;
+        <i class="fas fa-circle text-warning mr-1"></i> Admin buffer &nbsp;|&nbsp;
+        Distance: <strong id="modal-dist" class="ml-1"></strong>
+        &nbsp;/ Radius: <strong id="modal-radius" class="ml-1"></strong>
+        &nbsp;/ Eff. radius: <strong id="modal-effective-radius" class="ml-1"></strong>
+        &nbsp;| From exact point: <strong id="modal-exact-dist" class="ml-1"></strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Wait for jQuery and Leaflet to be available (both loaded deferred in admin).
+(function waitReady() {
+  if (!window.$ || !window.L) {
+    setTimeout(waitReady, 60);
+    return;
+  }
+  geolocAdminInit();
+}());
+
+function geolocAdminInit() {
+  'use strict';
+
+  var csrf = (window.init && window.init.csrfNonce) || '';
+  var _modalMap = null;
+
+  var _LAYERS = [
+    { key: 'osm',          icon: '🗺️',  label: 'OpenStreetMap',   desc: 'Open community map, detailed streets worldwide.' },
+    { key: 'esri',         icon: '🛰️',  label: 'Satellite (Esri)', desc: 'Aerial/satellite imagery from Esri.' },
+    { key: 'google_street',icon: '🗺️',  label: 'Google Street',   desc: 'Google Maps road layer.' },
+    { key: 'google_hybrid', icon: '🛰️', label: 'Google Hybrid',   desc: 'Google satellite + road overlay. (default)' },
+  ];
+
+  function renderLayerCards(currentKey) {
+    var container = document.getElementById('layer-cards');
+    container.innerHTML = '';
+    _LAYERS.forEach(function (l) {
+      var active = l.key === currentKey;
+      var col = document.createElement('div');
+      col.className = 'col-6 col-md-3';
+      col.innerHTML =
+        '<div class="card h-100 layer-card' + (active ? ' border-primary shadow-sm' : '') + '" ' +
+             'data-layer="' + l.key + '" style="cursor:pointer;transition:box-shadow .15s,border-color .15s;">' +
+          '<div class="card-body text-center py-3">' +
+            '<div style="font-size:2rem;line-height:1;">' + l.icon + '</div>' +
+            '<div class="font-weight-bold mt-2' + (active ? ' text-primary' : '') + '">' + l.label + '</div>' +
+            '<div class="text-muted small mt-1">' + l.desc + '</div>' +
+            (active ? '<div class="mt-2"><span class="badge badge-primary">Active</span></div>' : '') +
+          '</div>' +
+        '</div>';
+      col.querySelector('.layer-card').addEventListener('click', function () {
+        saveLayer(l.key);
+      });
+      container.appendChild(col);
+    });
+  }
+
+  function saveLayer(key) {
+    fetch('{{ url_for("geoloc_settings") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'CSRF-Token': csrf },
+      body: JSON.stringify({ default_layer: key })
+    }).then(function () {
+      renderLayerCards(key);
+      var el = document.getElementById('layer-saved');
+      el.style.display = 'inline';
+      setTimeout(function () { el.style.display = 'none'; }, 2000);
+    });
+  }
+
+  // Load current setting then render the cards.
+  fetch('{{ url_for("geoloc_settings") }}')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      renderLayerCards(d.default_layer || 'google_hybrid');
+      // Also sync the proximity-hints toggle with the server value.
+      if (d.proximity_hints !== undefined) {
+        document.getElementById('global_hints').checked = !!d.proximity_hints;
+      }
+    })
+    .catch(function () { renderLayerCards('google_hybrid'); });
+
+  document.getElementById('global_hints').addEventListener('change', function () {
+    fetch('{{ url_for("geoloc_settings") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'CSRF-Token': csrf },
+      body: JSON.stringify({ proximity_hints: this.checked })
+    }).then(function () {
+      var el = document.getElementById('global-saved');
+      el.style.display = 'inline';
+      setTimeout(function () { el.style.display = 'none'; }, 2000);
+    });
+  });
+
+  var allChallData     = [];
+  var challFiltered    = [];
+  var challCurrentPage = 1;
+  var challRowsPerPage = 10;
+
+  function filterChallenges() {
+    var q = document.getElementById('chall-search').value.toLowerCase().trim();
+    challFiltered = allChallData.filter(function (c) {
+      return !q ||
+        c.name.toLowerCase().includes(q) ||
+        (c.category || '').toLowerCase().includes(q);
+    });
+    challCurrentPage = 1;
+    renderChallengesPage();
+  }
+
+  function renderChallengesPage() {
+    var tbody      = document.getElementById('chall-tbody');
+    var totalPages = Math.max(1, Math.ceil(challFiltered.length / challRowsPerPage));
+    var start      = (challCurrentPage - 1) * challRowsPerPage;
+    var end        = Math.min(start + challRowsPerPage, challFiltered.length);
+    var pageData   = challFiltered.slice(start, end);
+
+    tbody.innerHTML = '';
+
+    if (challFiltered.length === 0) {
+      hide('chall-table');
+      document.getElementById('chall-pagination').style.display = 'none';
+      show('chall-empty');
+      return;
+    }
+    hide('chall-empty');
+    document.getElementById('chall-table').style.display = 'table';
+
+    pageData.forEach(function (c) {
+      var hv = (c.hint_setting === null || c.hint_setting === undefined)
+        ? 'inherit' : String(c.hint_setting);
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + esc(c.name) + '</td>' +
+        '<td>' + esc(c.category) + '</td>' +
+        '<td>' + c.value + '</td>' +
+        '<td>' + c.radius_meters + ' m</td>' +
+        '<td>' +
+          '<select class="form-control form-control-sm" style="width:auto;">' +
+            '<option value="inherit"' + sel(hv, 'inherit') + '>Inherit global</option>' +
+            '<option value="1"'       + sel(hv, '1')       + '>Always show</option>' +
+            '<option value="0"'       + sel(hv, '0')       + '>Never show</option>' +
+          '</select>' +
+        '</td>' +
+        '<td><span class="hint-saved text-success" style="display:none;font-size:.85em;">' +
+          '<i class="fas fa-check"></i> Saved</span></td>';
+      tbody.appendChild(tr);
+      var select  = tr.querySelector('select');
+      var savedEl = tr.querySelector('.hint-saved');
+      (function (chall) {
+        select.addEventListener('change', function () {
+          var v = this.value;
+          chall.hint_setting = (v === 'inherit') ? null : v; // update local cache
+          fetch('{{ url_for("geoloc_challenge_hint", challenge_id=0) }}'.replace('/0/', '/' + chall.id + '/'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'CSRF-Token': csrf },
+            body: JSON.stringify({ hint_setting: v === 'inherit' ? null : v })
+          }).then(function () {
+            savedEl.style.display = 'inline';
+            setTimeout(function () { savedEl.style.display = 'none'; }, 2000);
+          });
+        });
+      }(c));
+    });
+
+    // Show pagination only when there's more than one page or a filter is active
+    var paginationEl = document.getElementById('chall-pagination');
+    if (totalPages > 1 || challFiltered.length < allChallData.length) {
+      paginationEl.style.display = 'flex';
+    } else {
+      paginationEl.style.display = 'none';
+    }
+    document.getElementById('chall-pagination-info').textContent =
+      (challFiltered.length > 0 ? start + 1 : 0) + '–' + end + ' of ' + challFiltered.length;
+    document.getElementById('chall-page-indicator').textContent = challCurrentPage + ' / ' + totalPages;
+    document.getElementById('chall-btn-prev').disabled = challCurrentPage <= 1;
+    document.getElementById('chall-btn-next').disabled = challCurrentPage >= totalPages;
+  }
+
+  function loadChallenges() {
+    show('chall-loading');
+    hide('chall-table');
+    hide('chall-empty');
+    document.getElementById('chall-pagination').style.display = 'none';
+    document.getElementById('chall-controls').style.removeProperty('display'); // clear the !important
+    document.getElementById('chall-controls').style.display = 'none';
+
+    fetch('{{ url_for("geoloc_challenges_list") }}')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        hide('chall-loading');
+        if (!d.success || !d.data || !d.data.length) {
+          show('chall-empty');
+          return;
+        }
+        allChallData  = d.data;
+        challFiltered = allChallData.slice();
+        document.getElementById('chall-controls').style.display = 'flex';
+        renderChallengesPage();
+      })
+      .catch(function (e) {
+        hide('chall-loading');
+        show('chall-empty');
+        console.error('[GeoLoc] Failed to load challenges:', e);
+      });
+  }
+
+  var allSubData      = [];
+  var filteredSubData = [];
+  var currentPage  = 1;
+  var rowsPerPage  = 10;
+
+  function applyFilters() {
+    var chalFilter    = document.getElementById('filter-challenge').value;
+    var playerFilter  = document.getElementById('filter-player').value.toLowerCase().trim();
+    var resultFilter  = document.getElementById('filter-result').value;
+    filteredSubData = allSubData.filter(function (s) {
+      if (chalFilter   && String(s.challenge_id) !== chalFilter)         return false;
+      if (playerFilter && !s.user.toLowerCase().includes(playerFilter))  return false;
+      if (resultFilter && s.type !== resultFilter)                        return false;
+      return true;
+    });
+    currentPage = 1;
+    renderPage();
+  }
+
+  function renderPage() {
+    var tbody      = document.getElementById('sub-tbody');
+    tbody.innerHTML = '';
+    var totalPages = Math.max(1, Math.ceil(filteredSubData.length / rowsPerPage));
+    var start      = (currentPage - 1) * rowsPerPage;
+    var end        = Math.min(start + rowsPerPage, filteredSubData.length);
+    var pageData   = filteredSubData.slice(start, end);
+
+    if (filteredSubData.length === 0) {
+      show('sub-empty');
+      hide('sub-table-wrap');
+      document.getElementById('sub-pagination').style.display = 'none';
+      return;
+    }
+    hide('sub-empty');
+    show('sub-table-wrap');
+    document.getElementById('sub-pagination').style.display = '';
+
+    pageData.forEach(function (s) {
+      var correct = s.type === 'correct';
+      var distTxt = distLabel(s.distance_m);
+      var latTxt  = s.player_lat !== null ? s.player_lat.toFixed(6) : '—';
+      var lonTxt  = s.player_lon !== null ? s.player_lon.toFixed(6) : '—';
+      var effR    = (s.radius_meters * (1 + (s.tolerance_buffer_pct || 0) / 100)).toFixed(1);
+      var tr = document.createElement('tr');
+      if (correct) tr.classList.add('table-success');
+      tr.innerHTML =
+        '<td class="text-nowrap">' + esc(s.date) + '</td>' +
+        '<td>' + esc(s.challenge_name) + '</td>' +
+        '<td>' + esc(s.user) + '</td>' +
+        '<td>' + latTxt + '</td>' +
+        '<td>' + lonTxt + '</td>' +
+        '<td><span class="' + (correct ? 'text-success font-weight-bold' : 'text-danger') + '">' + distTxt + '</span></td>' +
+        '<td>' + s.radius_meters + ' m</td>' +
+        '<td>' + effR + ' m</td>' +
+        '<td><span class="badge ' + (correct ? 'badge-success' : 'badge-danger') + '">' + (correct ? '✓ Correct' : '✗ Incorrect') + '</span></td>' +
+        '<td>' + (s.player_lat !== null
+          ? '<button class="btn btn-sm btn-outline-info geoloc-map-btn" title="View on map"><i class="fas fa-map"></i></button>'
+          : '') + '</td>';
+      tbody.appendChild(tr);
+      var btn = tr.querySelector('.geoloc-map-btn');
+      if (btn) { (function (sub) { btn.addEventListener('click', function () { openMap(sub); }); }(s)); }
+    });
+
+    document.getElementById('pagination-info').textContent =
+      (filteredSubData.length > 0 ? start + 1 : 0) + '–' + end + ' of ' + filteredSubData.length + ' entries';
+    document.getElementById('page-indicator').textContent = currentPage + ' / ' + totalPages;
+    document.getElementById('btn-prev').disabled = currentPage <= 1;
+    document.getElementById('btn-next').disabled = currentPage >= totalPages;
+  }
+
+  function loadSubmissions() {
+    show('sub-loading');
+    hide('sub-table-wrap');
+    hide('sub-empty');
+    document.getElementById('sub-filters').style.display    = 'none';
+    document.getElementById('sub-pagination').style.display = 'none';
+
+    fetch('{{ url_for("geoloc_submissions_list") }}')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        hide('sub-loading');
+        if (!d.success || !d.data || !d.data.length) {
+          show('sub-empty');
+          return;
+        }
+        allSubData = d.data;
+        // Populate the challenge filter drop-down.
+        var chalSelect = document.getElementById('filter-challenge');
+        chalSelect.innerHTML = '<option value="">-- All challenges --</option>';
+        var seen = {};
+        allSubData.forEach(function (s) {
+          if (!seen[s.challenge_id]) {
+            seen[s.challenge_id] = true;
+            var opt = document.createElement('option');
+            opt.value       = s.challenge_id;
+            opt.textContent = esc(s.challenge_name);
+            chalSelect.appendChild(opt);
+          }
+        });
+        filteredSubData = allSubData.slice();
+        document.getElementById('sub-filters').style.display = 'block';
+        renderPage();
+      })
+      .catch(function (e) {
+        hide('sub-loading');
+        show('sub-empty');
+        console.error('[GeoLoc] Failed to load submissions:', e);
+      });
+  }
+
+  document.getElementById('chall-search').addEventListener('input', filterChallenges);
+  document.getElementById('chall-btn-prev').addEventListener('click', function () {
+    if (challCurrentPage > 1) { challCurrentPage--; renderChallengesPage(); }
+  });
+  document.getElementById('chall-btn-next').addEventListener('click', function () {
+    var total = Math.ceil(challFiltered.length / challRowsPerPage);
+    if (challCurrentPage < total) { challCurrentPage++; renderChallengesPage(); }
+  });
+
+  document.getElementById('refresh-btn').addEventListener('click', loadSubmissions);
+
+  document.getElementById('filter-challenge').addEventListener('change', applyFilters);
+  document.getElementById('filter-result').addEventListener('change', applyFilters);
+  document.getElementById('filter-player').addEventListener('input', applyFilters);
+  document.getElementById('reset-filters').addEventListener('click', function () {
+    document.getElementById('filter-challenge').value = '';
+    document.getElementById('filter-player').value   = '';
+    document.getElementById('filter-result').value   = '';
+    applyFilters();
+  });
+  document.getElementById('btn-prev').addEventListener('click', function () {
+    if (currentPage > 1) { currentPage--; renderPage(); }
+  });
+  document.getElementById('btn-next').addEventListener('click', function () {
+    var total = Math.ceil(filteredSubData.length / rowsPerPage);
+    if (currentPage < total) { currentPage++; renderPage(); }
+  });
+  document.getElementById('rows-per-page').addEventListener('change', function () {
+    rowsPerPage = parseInt(this.value);
+    currentPage = 1;
+    renderPage();
+  });
+
+  function openMap(s) {
+    var effectiveRadius = s.radius_meters * (1 + (s.tolerance_buffer_pct || 0) / 100);
+    document.getElementById('modal-chall-name').textContent       = s.challenge_name;
+    document.getElementById('modal-user').textContent             = s.user;
+    document.getElementById('modal-dist').textContent             = distLabel(s.distance_m);
+    document.getElementById('modal-radius').textContent           = distLabel(s.radius_meters);
+    document.getElementById('modal-effective-radius').textContent = distLabel(effectiveRadius);
+    document.getElementById('modal-exact-dist').textContent       =
+      s.distance_m !== null ? distLabel(s.distance_m) + ' from exact point' : '—';
+
+    var modalEl = document.getElementById('geolocMapModal');
+    $(modalEl).one('shown.bs.modal', function () { buildModalMap(s); });
+    // Bootstrap 5 uses the JS API; fall back to jQuery plugin (Bootstrap 4) if needed.
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    } else {
+      $(modalEl).modal('show');
+    }
+  }
+
+  function buildModalMap(s) {
+    var el = document.getElementById('geoloc-admin-modal-map');
+    if (_modalMap) { _modalMap.remove(); _modalMap = null; }
+    el.innerHTML = '';
+
+    var mid = [(s.player_lat + s.target_lat) / 2, (s.player_lon + s.target_lon) / 2];
+    var map = L.map('geoloc-admin-modal-map').setView(mid, 14);
+    _modalMap = map;
+
+    // Tile layers
+    var osmL = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap contributors'
+    });
+    var esriL = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, attribution: 'Tiles © Esri'
+    });
+    var gStreetL = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20, subdomains: ['0','1','2','3'], attribution: '© Google'
+    });
+    var gHybridL = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20, subdomains: ['0','1','2','3'], attribution: '© Google'
+    });
+    osmL.addTo(map);
+    L.control.layers({
+      '🗺️ OpenStreetMap':   osmL,
+      '🛰️ Satellite (Esri)': esriL,
+      '🗺️ Google Street':   gStreetL,
+      '🛰️ Google Hybrid':   gHybridL,
+    }, {}, { position: 'topright' }).addTo(map);
+
+    // Target marker + acceptance circles
+    var targetLL = L.latLng(s.target_lat, s.target_lon);
+    L.marker(targetLL, { title: 'Target' })
+      .bindPopup('<b>Target</b><br>' + s.target_lat.toFixed(6) + ', ' + s.target_lon.toFixed(6))
+      .addTo(map);
+    L.circle(targetLL, {
+      radius: s.radius_meters,
+      color: '#28a745', fillColor: '#28a745', fillOpacity: 0.18, weight: 2
+    }).addTo(map);
+    L.circle(targetLL, {
+      radius: s.radius_meters * (1 + (s.tolerance_buffer_pct || 0) / 100),
+      color: '#fd7e14', fillColor: '#fd7e14', fillOpacity: 0, weight: 3, dashArray: '4 4'
+    }).addTo(map);
+
+    // Player marker
+    if (s.player_lat !== null) {
+      var playerLL = L.latLng(s.player_lat, s.player_lon);
+      L.marker(playerLL)
+        .bindPopup(
+          '<b>Player: ' + esc(s.user) + '</b><br>' +
+          s.player_lat.toFixed(6) + ', ' + s.player_lon.toFixed(6) + '<br>' +
+          'Distance: ' + distLabel(s.distance_m)
+        )
+        .addTo(map);
+      L.circle(playerLL, {
+        radius: s.radius_meters,
+        color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.08,
+        weight: 2, dashArray: '6 4'
+      }).addTo(map);
+      map.fitBounds(L.latLngBounds([targetLL, playerLL]).pad(0.35));
+    }
+
+    setTimeout(function () { map.invalidateSize(); }, 120);
+  }
+
+  function distLabel(m) {
+    if (m === null || m === undefined) return '—';
+    return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : m + ' m';
+  }
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function sel(val, opt) { return val === opt ? ' selected' : ''; }
+  function show(id) { document.getElementById(id).style.display = 'block'; }
+  function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+  loadChallenges();
+  loadSubmissions();
+}
+</script>
+{% endblock %}
