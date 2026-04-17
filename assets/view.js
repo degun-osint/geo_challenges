@@ -70,6 +70,7 @@ CTFd.plugin.run((_CTFd) => {
         mapInstance = L.map("map-solve", {
           center: [0, 0],
           zoom: 2,
+          worldCopyJump: true,
         });
 
         // Define base layers
