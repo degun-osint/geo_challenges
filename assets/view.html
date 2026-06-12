@@ -24,7 +24,7 @@
                 {% endif %}
                 
                 <li class="nav-item">
-                    <button class="nav-link challenge-solves" data-bs-target="#solves" data-bs-toggle="tab">
+                    <button class="nav-link challenge-solves" data-bs-target="#solves" @click="showSolves()">
                         {% if solves != None %}
                             {{ solves }} {% if solves > 1 %}Solves{% else %}Solve{% endif %}
                         {% endif %}
@@ -197,6 +197,14 @@
                                         </tr>
                                     </thead>
                                     <tbody id="challenge-solves-names">
+                                    <template x-for="solve in solves">
+                                        <tr>
+                                            <td>
+                                                <a :href="solve.account_url" x-text="solve.name"></a>
+                                            </td>
+                                            <td x-text="solve.date"></td>
+                                        </tr>
+                                    </template>
                                     </tbody>
                                 </table>
                             </div>
