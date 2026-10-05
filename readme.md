@@ -15,6 +15,7 @@ This plugin was originally developed for [Oscar Zulu](https://oscarzulu.org) to 
 - Two answer types:
   - **Point + tolerance radius** — an answer counts if it lands within a given radius of the target
   - **Polygon zone** — an answer counts if it lands inside a drawn area (e.g. a specific building)
+- Optional dynamic scoring (`geo_dynamic` type): the value decays with solves exactly like CTFd's built-in dynamic challenges (initial value, linear/logarithmic decay function, decay, minimum value)
 - Draw and edit polygon answer zones directly on the map (Leaflet.Draw)
 - Geocoding support for location search, including exact coordinate input (decimal, DMS, DMM, N/S/E/W)
 - Multilingual interface (English, French, Spanish)
@@ -38,8 +39,8 @@ This plugin was originally developed for [Oscar Zulu](https://oscarzulu.org) to 
 ### Creating a Geo Challenge
 
 1. In the CTFd admin panel, go to Challenges → Create Challenge
-2. Select "geo" as the challenge type
-3. Fill in the standard fields (name, category, description, etc.)
+2. Select "geo" as the challenge type (fixed value), or "geo_dynamic" for a value that decreases as the challenge gets solved
+3. Fill in the standard fields (name, category, description, etc.). For "geo_dynamic", also set the initial value, decay function (linear or logarithmic), decay and minimum value — these behave exactly like CTFd's "dynamic" challenge type
 4. Choose the **answer type**:
    - *Point + tolerance radius*: click the target location on the map and set a tolerance radius (in meters)
    - *Polygon zone*: use the polygon tool (top-left of the map) to draw the answer area, then fine-tune its vertices

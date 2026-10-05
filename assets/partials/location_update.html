@@ -1,0 +1,63 @@
+{# Answer type, map and point fields shared by geo and geo_dynamic update pages #}
+<style>
+    #map-update {
+        height: 400px;
+        width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        z-index: 1;
+    }
+</style>
+
+<div class="form-group">
+    <label>Answer type<br>
+        <small class="form-text text-muted">
+            Choose how the solution is defined.
+        </small>
+    </label>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="geo_mode" id="geo-mode-point" value="point" {% if not challenge.polygon %}checked{% endif %}>
+        <label class="form-check-label" for="geo-mode-point">
+            Point + tolerance radius <span class="text-muted">(a point counts if within the radius)</span>
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="geo_mode" id="geo-mode-polygon" value="polygon" {% if challenge.polygon %}checked{% endif %}>
+        <label class="form-check-label" for="geo-mode-polygon">
+            Polygon zone <span class="text-muted">(a point counts if inside the drawn area — e.g. a building)</span>
+        </label>
+    </div>
+</div>
+
+<div class="form-group">
+    <label>Location Selection<br>
+        <small class="form-text text-muted geo-hint-point"{% if challenge.polygon %} style="display: none;"{% endif %}>Click on the map to change the target location.</small>
+        <small class="form-text text-muted geo-hint-polygon"{% if not challenge.polygon %} style="display: none;"{% endif %}>Use the polygon tool (top-left of the map) to draw the answer zone, then adjust its vertices.</small>
+    </label>
+    <div id="map-update"></div>
+</div>
+
+<!-- Polygon geometry (JSON array of [lat, lng]); empty in point mode -->
+<input type="hidden" name="polygon" id="polygon" value="{{ challenge.polygon or '' }}">
+
+<div class="geo-point-fields"{% if challenge.polygon %} style="display: none;"{% endif %}>
+    <div class="form-group">
+        <label for="latitude">Latitude</label>
+        <input type="text" class="form-control" name="latitude" id="latitude" value="{{ challenge.latitude }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="longitude">Longitude</label>
+        <input type="text" class="form-control" name="longitude" id="longitude" value="{{ challenge.longitude }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="tolerance_radius">Tolerance Radius (meters)<br>
+            <small class="form-text text-muted">
+                Users within this radius will receive full points
+            </small>
+        </label>
+        <input type="number" class="form-control" name="tolerance_radius" min="1" value="{{ challenge.tolerance_radius }}" required>
+    </div>
+</div>
